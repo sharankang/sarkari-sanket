@@ -1,0 +1,5 @@
+# Ignore the file containing our secret keys
+.env
+
+# Ignore Python's cache files
+__pycache__/
