@@ -13,7 +13,6 @@ def home():
 def analyze_bill():
     data = request.get_json()
     bill_name = data.get('bill_name')
-    # Get language from request, default to English
     language = data.get('language', 'English') 
     
     if not bill_name:

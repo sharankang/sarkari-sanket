@@ -8,7 +8,6 @@ from io import BytesIO
 import praw
 import re
 
-
 try:
     from config import (
         GOOGLE_API_KEY, SEARCH_ENGINE_ID, GEMINI_API_KEY,
