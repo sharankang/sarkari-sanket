@@ -5,141 +5,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sarkari Sanket</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 24px; height: 24px; animation: spin 2s linear infinite; display: inline-block; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .toggle-label { display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        .toggle-input { display: none; }
-        .toggle-switch { position: relative; display: inline-block; width: 120px; height: 34px; background-color: #e5e7eb; border-radius: 9999px; transition: background-color 0.2s; }
-        .toggle-switch:before { content: ""; position: absolute; left: 4px; top: 4px; width: 26px; height: 26px; background-color: white; border-radius: 50%; transition: transform 0.2s; }
-        .toggle-input:checked + .toggle-switch { background-color: #3b82f6; }
-        .toggle-input:checked + .toggle-switch:before { transform: translateX(86px); }
-        .toggle-text { margin: 0 10px; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-50">
 
-    <header class="bg-white shadow-md">
-        <div class="container mx-auto px-4 py-6">
-            <h1 class="text-3xl font-bold text-gray-800">Sarkari Sanket</h1>
-            <p class="text-gray-600">Government bills and schemes, simplified.</p>
+    <header class="bg-gradient-to-r from-orange-500 to-green-600 text-white shadow-lg">
+        <div class="container mx-auto text-center px-4 py-16 md:py-24">
+            <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight">Sarkari Sanket</h1>
+            <p class="mt-4 text-lg md:text-xl text-orange-100 max-w-2xl mx-auto">Complex government bills and schemes, simplified for every citizen.</p>
         </div>
     </header>
 
-    <main class="container mx-auto px-4 py-8">
-        <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <main class="container mx-auto px-4 py-8 -mt-16">
+        <div class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
             <form id="bill-form">
                 <div class="mb-6">
-                    <label for="billName" class="block text-gray-700 font-bold mb-2">Enter Bill Name</label>
-                    <input type="text" id="billName" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700" placeholder="e.g., The Digital Personal Data Protection Bill, 2023" required />
+                    <label for="billName" class="block text-gray-800 font-bold mb-3 text-lg">Enter Bill Name</label>
+                    <input type="text" id="billName" class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., The Digital Personal Data Protection Bill, 2023" required />
                 </div>
                 
-                <div class="mb-6">
+                <div class="mb-8">
                     <label class="toggle-label">
-                        <span class="toggle-text font-medium text-gray-700" id="lang-en">English</span>
+                        <span class="toggle-text text-gray-800" id="lang-en">English</span>
                         <input type="checkbox" id="language-toggle" class="toggle-input">
                         <div class="toggle-switch"></div>
-                        <span class="toggle-text font-medium text-gray-400" id="lang-hi">Hinglish</span>
+                        <span class="toggle-text text-gray-400" id="lang-hi">Hinglish</span>
                     </label>
                 </div>
 
                 <div class="text-center">
-                    <button type="submit" id="submit-button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center justify-center mx-auto">Analyze Bill</button>
+                    <button type="submit" id="submit-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg text-lg transform hover:scale-105 transition-transform duration-200 ease-in-out shadow-lg flex items-center justify-center mx-auto w-full md:w-auto">Analyze Bill</button>
                 </div>
             </form>
-            <p id="error-message" class="text-red-500 text-center mt-4"></p>
+            <p id="error-message" class="text-red-600 font-semibold text-center mt-4"></p>
         </div>
 
         <div id="results-wrapper" class="hidden mt-8 space-y-8">
-            <div id="summary-section" class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-                <h2 id="summary-title" class="text-2xl font-bold text-gray-800 mb-2">Summary</h2>
-                <div id="source-info" class="text-sm text-gray-500 mb-4"></div>
-                <div id="summary-content" class="text-gray-700 prose"></div>
+            <div id="summary-section" class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+                <h2 id="summary-title" class="text-3xl font-bold text-gray-900 mb-2">Summary</h2>
+                <div id="source-info" class="text-sm text-gray-500 mb-6 border-b pb-4"></div>
+                <div id="summary-content" class="text-gray-800 prose prose-lg"></div>
             </div>
 
-            <div id="sentiment-section" class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4">Public Sentiment</h2>
-                <div id="sentiment-bar" class="flex w-full h-8 bg-gray-200 rounded-full overflow-hidden"></div>
-                <div class="flex justify-around mt-4 text-sm">
-                    <span class="flex items-center"><span class="h-3 w-3 bg-green-500 rounded-full mr-2"></span>Positive</span>
-                    <span class="flex items-center"><span class="h-3 w-3 bg-red-500 rounded-full mr-2"></span>Negative</span>
-                    <span class="flex items-center"><span class="h-3 w-3 bg-gray-400 rounded-full mr-2"></span>Neutral</span>
+            <div id="sentiment-section" class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Public Sentiment</h2>
+                <div id="sentiment-bar-wrapper">
+                    <div id="sentiment-bar" class="flex w-full h-8 bg-gray-200 rounded-full overflow-hidden"></div>
+                    <div class="flex justify-around mt-4 text-base font-medium">
+                        <span class="flex items-center"><span class="h-3 w-3 bg-green-500 rounded-full mr-2"></span>Positive</span>
+                        <span class="flex items-center"><span class="h-3 w-3 bg-red-500 rounded-full mr-2"></span>Negative</span>
+                        <span class="flex items-center"><span class="h-3 w-3 bg-gray-400 rounded-full mr-2"></span>Neutral</span>
+                    </div>
                 </div>
+                <p id="sentiment-note" class="text-center text-gray-600 mt-4 text-lg"></p>
             </div>
         </div>
     </main>
 
-    <script>
-        const billForm = document.getElementById('bill-form');
-        const billNameInput = document.getElementById('billName');
-        const languageToggle = document.getElementById('language-toggle');
-        const langEn = document.getElementById('lang-en');
-        const langHi = document.getElementById('lang-hi');
-        const submitButton = document.getElementById('submit-button');
-        const errorMessage = document.getElementById('error-message');
-        const resultsWrapper = document.getElementById('results-wrapper');
-        const summarySection = document.getElementById('summary-section');
-        const summaryTitle = document.getElementById('summary-title');
-        const summaryContent = document.getElementById('summary-content');
-        const sentimentSection = document.getElementById('sentiment-section');
-        const sentimentBar = document.getElementById('sentiment-bar');
-        const sourceInfo = document.getElementById('source-info');
+    <footer class="text-center py-8 text-gray-500">
+        <p>&copy; 2025 Sarkari Sanket. All rights reserved.</p>
+    </footer>
 
-        languageToggle.addEventListener('change', () => {
-            if (languageToggle.checked) {
-                langEn.classList.add('text-gray-400');
-                langHi.classList.remove('text-gray-400');
-            } else {
-                langEn.classList.remove('text-gray-400');
-                langHi.classList.add('text-gray-400');
-            }
-        });
-
-        billForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const selectedLanguage = languageToggle.checked ? 'Hinglish' : 'English';
-            submitButton.disabled = true;
-            submitButton.innerHTML = `<div class="loader"></div><span class="ml-2">Analyzing...</span>`;
-            errorMessage.textContent = '';
-            resultsWrapper.classList.add('hidden');
-            
-            try {
-                const response = await fetch('http://127.0.0.1:5000/api/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        bill_name: billNameInput.value,
-                        language: selectedLanguage
-                    }),
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    errorMessage.textContent = data.error || 'An unknown error occurred.';
-                    throw new Error(data.error);
-                }
-                
-                resultsWrapper.classList.remove('hidden');
-
-                summaryTitle.textContent = `Summary (${selectedLanguage})`;
-                if (data.source_url) {
-                    sourceInfo.innerHTML = `Information sourced from: <a href="${data.source_url}" target="_blank" class="text-blue-600 hover:underline">${data.source_url}</a>`;
-                }
-                let summaryHtml = data.summary.replace(/### (.*?)\n/g, '<h3 class="text-xl font-bold mt-4 mb-2">$1</h3>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                summaryContent.innerHTML = summaryHtml;
-                
-                const { positive, negative, neutral } = data.sentiment;
-                sentimentBar.innerHTML = `<div class="flex justify-center items-center h-full bg-green-500 text-white text-xs font-bold" style="width: ${positive}%">${positive}%</div><div class="flex justify-center items-center h-full bg-red-500 text-white text-xs font-bold" style="width: ${negative}%">${negative}%</div><div class="flex justify-center items-center h-full bg-gray-400 text-white text-xs font-bold" style="width: ${neutral}%">${neutral}%</div>`;
-                
-            } catch (error) {
-                console.error("Fetch error:", error);
-                if(!errorMessage.textContent) {
-                    errorMessage.textContent = 'Failed to analyze the bill. Please check the backend server.';
-                }
-            } finally {
-                submitButton.disabled = false;
-                submitButton.innerHTML = 'Analyze Bill';
-            }
-        });
-    </script>
+    <script src="js/script.js"></script>
 </body>
 </html>
+
