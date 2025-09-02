@@ -3,7 +3,9 @@ from flask_cors import CORS
 from agent import get_bill_text_from_web, generate_detailed_summary, get_social_media_sentiment
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": ["http://127.0.0.1:5500", "http://localhost:3000", "http://127.0.0.1:8000", "https://sharankang.github.io"]}})
+# CORS(app, resources={r"/api/*": {"origins": ["http://127.0.0.1:5500", "http://localhost:3000", "http://127.0.0.1:8000", "https://sharankang.github.io"]}})
+
+CORS(app)
 
 @app.route('/')
 def home():
