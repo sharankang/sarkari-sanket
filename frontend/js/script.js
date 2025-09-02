@@ -38,7 +38,7 @@ billForm.addEventListener('submit', async (e) => {
     resultsWrapper.classList.add('hidden');
     
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/analyze', {
+        const response = await fetch('https://sarkari-sanket-backend.onrender.com', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ bill_name: billNameInput.value, language: selectedLanguage }),
