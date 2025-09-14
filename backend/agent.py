@@ -7,6 +7,7 @@ import PyPDF2
 from io import BytesIO
 import praw
 import re
+from datetime import datetime
 
 try:
     from config import (
@@ -23,63 +24,62 @@ if GEMINI_API_KEY:
 
 
 def get_bill_text_from_web(bill_name: str):
-    """
-    This function is unchanged from your working version.
-    """
-    print(f"AGENT: Searching for '{bill_name}'...")
+    print(f"AGENT: Starting resilient search for '{bill_name}'...")
     if not GOOGLE_API_KEY or not SEARCH_ENGINE_ID:
         return {'error': "Google API keys are not configured."}
+    
     try:
         service = build("customsearch", "v1", developerKey=GOOGLE_API_KEY, static_discovery=False)
         query = bill_name
         res = service.cse().list(q=query, cx=SEARCH_ENGINE_ID, num=5).execute()
+
         if 'items' not in res or not res['items']:
-            return {'error': "Sorry, no search results were found."}
+            return {'error': "Sorry, no search results were found for this bill."}
         
-        trusted_source_url = None
         trusted_domains = ['prsindia.org', 'gov.in', 'nic.in', 'sansad.in', 'legislative.gov.in', 'pib.gov.in', 'indiacode.nic.in']
         
-        for item in res['items']:
+        for i, item in enumerate(res['items']):
             source_url = item['link']
-            if any(domain in source_url for domain in trusted_domains):
-                trusted_source_url = source_url
-                print(f"AGENT: Found trusted source: {trusted_source_url}")
-                break
+            print(f"\nAGENT: Attempt {i+1}: Trying source -> {source_url}")
+
+            try:
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                response = requests.get(source_url, headers=headers, timeout=20)
+                response.raise_for_status()
+                
+                scraped_text = ""
+                if source_url.lower().endswith('.pdf'):
+                    print("AGENT: PDF detected. Attempting to read with PyPDF2.")
+                    pdf_file = BytesIO(response.content)
+                    pdf_reader = PyPDF2.PdfReader(pdf_file)
+                    for page in pdf_reader.pages:
+                        scraped_text += page.extract_text() or ""
+                else:
+                    print("AGENT: HTML detected. Attempting to read with BeautifulSoup.")
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    paragraphs = soup.find_all('p')
+                    if paragraphs:
+                        scraped_text = ' '.join(p.get_text() for p in paragraphs)
+                
+                if scraped_text and len(scraped_text) > 100:
+                    print(f"AGENT: SUCCESS! Found and read readable text from {source_url}")
+                    return {'text': scraped_text[:4000], 'url': source_url, 'error': None}
+                else:
+                    print("AGENT: Source was accessible, but contained no readable text.")
+
+            except requests.exceptions.RequestException as e:
+                print(f"AGENT: FAILED to connect to the source. Error: {e}")
+            except Exception as e:
+                print(f"AGENT: FAILED to parse the source. Error: {e}")
         
-        if not trusted_source_url:
-            trusted_source_url = res['items'][0]['link']
-            print(f"AGENT: No trusted source found. Trying first result: {trusted_source_url}")
-            
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(trusted_source_url, headers=headers, timeout=15)
-        response.raise_for_status()
-        
-        scraped_text = ""
-        if trusted_source_url.lower().endswith('.pdf'):
-            pdf_file = BytesIO(response.content)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
-            for page in pdf_reader.pages:
-                scraped_text += page.extract_text() or ""
-        else:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            paragraphs = soup.find_all('p')
-            if paragraphs:
-                scraped_text = ' '.join(p.get_text() for p in paragraphs)
-        
-        if not scraped_text:
-            return {'error': "Could not extract readable text from the source.", 'url': trusted_source_url}
-            
-        return {'text': scraped_text[:4000], 'url': trusted_source_url, 'error': None}
-        
+        return {'error': "Could not find and access a readable source after trying multiple links."}
+
     except Exception as e:
-        print(f"--- DETAILED AGENT ERROR ---\n{e}\n--------------------------")
-        return {'error': f"A technical error occurred while fetching data: {e}"}
+        print(f"--- DETAILED AGENT ERROR (Google Search API) ---\n{e}\n--------------------------")
+        return {'error': f"A critical error occurred with the Google Search API: {e}"}
 
 
 def generate_detailed_summary(bill_text: str, bill_name: str, language: str) -> str:
-    """
-    This function is also unchanged from your working version.
-    """
     print(f"AGENT: Sending text to Gemini for summarization in {language}...")
     if not GEMINI_API_KEY:
         return "Error: Gemini API key is not configured."
@@ -96,18 +96,13 @@ def generate_detailed_summary(bill_text: str, bill_name: str, language: str) -> 
     model = genai.GenerativeModel('gemini-1.5-flash-latest')
     prompt = f"""
     You are an expert policy analyst named 'Sarkari Sanket'. Your task is to analyze the provided text of a government bill and {language_instruction}
-
     The bill name is: "{bill_name}"
     The bill text is: "{bill_text}"
-
     Your summary MUST be structured into exactly two sections with the following markdown headings:
-
     {heading1}
     (In this section, clearly explain the people, groups, or industries affected by this bill. Be specific.)
-
     {heading2}
     (In this section, explain the main purpose, key features, and the most important changes this bill introduces. Use simple language.)
-
     Generate the response now.
     """
     try:
@@ -120,17 +115,25 @@ def generate_detailed_summary(bill_text: str, bill_name: str, language: str) -> 
 
 
 def get_social_media_sentiment(bill_name: str) -> dict:
-    """
-    AGENT STEP 3: This is the UPGRADED function that uses the Reddit API.
-    """
-    print(f"AGENT: Searching Reddit for '{bill_name}'...")
+    print(f"AGENT: Starting sentiment analysis for '{bill_name}'...")
     if not all([REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT]):
         return {'error': "Reddit API keys are not fully configured."}
 
+    time_period = 'year' # Default to 'year' for recent bills
     try:
-        year_match = re.search(r'\b(19\d{2}|20[0-1]\d)\b', bill_name)
+        year_match = re.search(r'\b(19\d{2}|20\d{2})\b', bill_name)
         if year_match:
-            return {'note': "Sentiment analysis is not available for bills before 2020."}
+            bill_year = int(year_match.group(0))
+            current_year = datetime.now().year
+            
+            if bill_year < 2020:
+                print(f"AGENT: Bill year ({bill_year}) is before 2020. Skipping sentiment analysis.")
+                return {'note': "Sentiment analysis is not available for bills before 2020."}
+            
+            if bill_year < current_year:
+                time_period = 'all'
+                print(f"AGENT: Bill from a past year ({bill_year}). Setting time filter to 'all'.")
+
     except Exception:
         pass 
 
@@ -141,8 +144,9 @@ def get_social_media_sentiment(bill_name: str) -> dict:
             user_agent=REDDIT_USER_AGENT,
         )
         
+        print(f"AGENT: Searching Reddit with time_filter='{time_period}'...")
         subreddit = reddit.subreddit("india+unitedstatesofindia+indiaspeaks")
-        submissions = subreddit.search(bill_name, sort='relevance', time_filter='year', limit=25)
+        submissions = subreddit.search(bill_name, sort='relevance', time_filter=time_period, limit=25)
         
         comments_and_titles = []
         for post in submissions:
@@ -152,8 +156,10 @@ def get_social_media_sentiment(bill_name: str) -> dict:
                 comments_and_titles.append(comment.body)
 
         if not comments_and_titles:
+            print("AGENT: No relevant Reddit posts found.")
             return {'note': "No relevant posts found on Reddit for this bill."}
-
+        
+        print(f"AGENT: Found {len(comments_and_titles)} posts and comments to analyze.")
         positive, negative, neutral = 0, 0, 0
         for text in comments_and_titles:
             analysis = TextBlob(text)
@@ -165,11 +171,15 @@ def get_social_media_sentiment(bill_name: str) -> dict:
                 neutral += 1
         
         total = len(comments_and_titles)
-        return {
+        result = {
             'positive': round((positive / total) * 100),
             'negative': round((negative / total) * 100),
             'neutral': round((neutral / total) * 100)
         }
+        print(f"AGENT: Sentiment analysis complete. Result: {result}")
+        return result
+
     except Exception as e:
         print(f"AGENT ERROR (Reddit API): {e}")
         return {'error': f"Could not fetch data from Reddit. Please check your API keys."}
+

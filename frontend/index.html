@@ -1,75 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sarkari Sanket</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sarkari Sanket</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 font-inter">
 
-    <header class="bg-gradient-to-r from-orange-500 to-green-600 text-white shadow-lg">
-        <div class="container mx-auto text-center px-4 py-16 md:py-24">
-            <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight">Sarkari Sanket</h1>
-            <p class="mt-4 text-lg md:text-xl text-orange-100 max-w-2xl mx-auto">Complex government bills and schemes, simplified for every citizen.</p>
+  <nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <a href="#home" class="text-2xl font-extrabold text-green-600">Sarkari Sanket</a>
+
+      <div class="hidden md:flex space-x-8 text-gray-700 font-medium">
+        <a href="#home" class="hover:text-green-600 transition">Home</a>
+        <a href="#analyze" class="hover:text-green-600 transition">Analyze Bill</a>
+        <a href="#history" class="hover:text-green-600 transition">History</a>
+        <a href="#about" class="hover:text-green-600 transition">About</a>
+      </div>
+
+
+      <button id="menu-btn" class="md:hidden text-gray-700 focus:outline-none">
+        ☰
+      </button>
+    </div>
+
+
+    <div id="mobile-menu" class="hidden md:hidden bg-white shadow-md flex flex-col items-center py-4 space-y-4">
+      <a href="#home" class="hover:text-green-600">Home</a>
+      <a href="#analyze" class="hover:text-green-600">Analyze Bill</a>
+      <a href="#history" class="hover:text-green-600">History</a>
+      <a href="#about" class="hover:text-green-600">About</a>
+    </div>
+  </nav>
+
+
+  <section id="home" class="relative bg-gradient-to-r from-green-600 to-orange-500 text-white min-h-screen flex flex-col justify-center items-center text-center px-6 pt-24">
+    <h1 class="text-5xl md:text-7xl font-extrabold mb-6 drop-shadow-lg">Welcome to Sarkari Sanket</h1>
+    <p class="text-lg md:text-2xl max-w-2xl mb-10 text-orange-100">
+      Your AI-powered guide to understanding government bills and policies.
+    </p>
+    <button onclick="scrollToForm()" class="bg-white text-green-700 font-bold py-4 px-10 rounded-full shadow-xl transform hover:scale-110 transition duration-300">
+      Start Analyzing
+    </button>
+
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 max-w-5xl">
+      <div class="bg-white text-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+        <h3 class="text-xl font-bold mb-3">📜 Simplified Bills</h3>
+        <p>Get complex government documents broken down into easy-to-understand summaries.</p>
+      </div>
+      <div class="bg-white text-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+        <h3 class="text-xl font-bold mb-3">📊 Public Sentiment</h3>
+        <p>See how people feel about each bill with AI-powered sentiment analysis.</p>
+      </div>
+      <div class="bg-white text-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+        <h3 class="text-xl font-bold mb-3">🌐 Multi-language</h3>
+        <p>Switch between English and Hinglish for better understanding.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <main id="analyze" class="container mx-auto px-4 py-20">
+    <div class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+      <form id="bill-form">
+        <div class="mb-6">
+          <label for="billName" class="block text-gray-800 font-bold mb-3 text-lg">Enter Bill Name</label>
+          <input type="text" id="billName" class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., The Digital Personal Data Protection Bill, 2023" required/>
         </div>
-    </header>
-
-    <main class="container mx-auto px-4 py-8 -mt-16">
-        <div class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
-            <form id="bill-form">
-                <div class="mb-6">
-                    <label for="billName" class="block text-gray-800 font-bold mb-3 text-lg">Enter Bill Name</label>
-                    <input type="text" id="billName" class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., The Digital Personal Data Protection Bill, 2023" required />
-                </div>
-                
-                <div class="mb-8">
-                    <label class="toggle-label">
-                        <span class="toggle-text text-gray-800" id="lang-en">English</span>
-                        <input type="checkbox" id="language-toggle" class="toggle-input">
-                        <div class="toggle-switch"></div>
-                        <span class="toggle-text text-gray-400" id="lang-hi">Hinglish</span>
-                    </label>
-                </div>
-
-                <div class="text-center">
-                    <button type="submit" id="submit-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg text-lg transform hover:scale-105 transition-transform duration-200 ease-in-out shadow-lg flex items-center justify-center mx-auto w-full md:w-auto">Analyze Bill</button>
-                </div>
-            </form>
-            <p id="error-message" class="text-red-600 font-semibold text-center mt-4"></p>
+        
+        <div class="mb-8">
+          <label class="toggle-label">
+            <span class="toggle-text text-gray-800" id="lang-en">English</span>
+            <input type="checkbox" id="language-toggle" class="toggle-input">
+            <div class="toggle-switch"></div>
+            <span class="toggle-text text-gray-400" id="lang-hi">Hinglish</span>
+          </label>
         </div>
 
-        <div id="results-wrapper" class="hidden mt-8 space-y-8">
-            <div id="summary-section" class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
-                <h2 id="summary-title" class="text-3xl font-bold text-gray-900 mb-2">Summary</h2>
-                <div id="source-info" class="text-sm text-gray-500 mb-6 border-b pb-4"></div>
-                <div id="summary-content" class="text-gray-800 prose prose-lg"></div>
-            </div>
-
-            <div id="sentiment-section" class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
-                <h2 class="text-3xl font-bold text-gray-900 mb-4">Public Sentiment</h2>
-                <div id="sentiment-bar-wrapper">
-                    <div id="sentiment-bar" class="flex w-full h-8 bg-gray-200 rounded-full overflow-hidden"></div>
-                    <div class="flex justify-around mt-4 text-base font-medium">
-                        <span class="flex items-center"><span class="h-3 w-3 bg-green-500 rounded-full mr-2"></span>Positive</span>
-                        <span class="flex items-center"><span class="h-3 w-3 bg-red-500 rounded-full mr-2"></span>Negative</span>
-                        <span class="flex items-center"><span class="h-3 w-3 bg-gray-400 rounded-full mr-2"></span>Neutral</span>
-                    </div>
-                </div>
-                <p id="sentiment-note" class="text-center text-gray-600 mt-4 text-lg"></p>
-            </div>
+        <div class="text-center">
+          <button type="submit" id="submit-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg text-lg transform hover:scale-105 transition-transform duration-200 ease-in-out shadow-lg flex items-center justify-center mx-auto w-full md:w-auto">Analyze Bill</button>
         </div>
-    </main>
+      </form>
+      <p id="error-message" class="text-red-600 font-semibold text-center mt-4"></p>
+    </div>
 
-    <footer class="text-center py-8 text-gray-500">
-        <p>&copy; 2025 Sarkari Sanket. All rights reserved.</p>
-    </footer>
+    <div id="results-wrapper" class="hidden mt-8 space-y-8">
+      <div id="summary-section" class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+        <h2 id="summary-title" class="text-3xl font-bold text-gray-900 mb-2">Summary</h2>
+        <div id="source-info" class="text-sm text-gray-500 mb-6 border-b pb-4"></div>
+        <div id="summary-content" class="text-gray-800 prose prose-lg"></div>
+      </div>
 
-    <script src="js/script.js"></script>
+      <div id="sentiment-section" class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Public Sentiment</h2>
+        <div id="sentiment-bar-wrapper">
+          <div id="sentiment-bar" class="flex w-full h-8 bg-gray-200 rounded-full overflow-hidden"></div>
+          <div class="flex justify-around mt-4 text-base font-medium">
+            <span class="flex items-center"><span class="h-3 w-3 bg-green-500 rounded-full mr-2"></span>Positive</span>
+            <span class="flex items-center"><span class="h-3 w-3 bg-red-500 rounded-full mr-2"></span>Negative</span>
+            <span class="flex items-center"><span class="h-3 w-3 bg-gray-400 rounded-full mr-2"></span>Neutral</span>
+          </div>
+        </div>
+        <p id="sentiment-note" class="text-center text-gray-600 mt-4 text-lg"></p>
+      </div>
+    </div>
+  </main>
+
+
+  <section id="history" class="max-w-4xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Search History</h2>
+    <div id="history-list" class="space-y-4">
+      <p id="no-history" class="text-gray-500 text-center">No history yet. Analyze a bill to see it here.</p>
+    </div>
+  </section>
+
+
+  <section id="about" class="bg-gray-100 py-20 px-6">
+    <div class="max-w-6xl mx-auto text-center">
+      <h2 class="text-4xl font-extrabold mb-6 text-gray-800">About Sarkari Sanket</h2>
+      <p class="max-w-3xl mx-auto text-gray-600 text-lg mb-12">
+        Sarkari Sanket is an AI-powered platform that simplifies government bills and schemes. 
+        It provides easy-to-understand summaries, public sentiment insights, and multi-language support 
+        so every citizen can stay informed and empowered.
+      </p>
+
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+          <img src="https://images.unsplash.com/photo-1521791055366-0d553872125f?ixlib=rb-4.0.3&auto=format&fit=crop&w=900&q=60" alt="Data Protection Bill" class="w-full h-40 object-cover">
+          <div class="p-6 text-left">
+            <h3 class="text-xl font-bold text-gray-800 mb-2">📜 Data Protection Bill</h3>
+            <p class="text-gray-600 text-sm">AI simplifies the Digital Personal Data Protection Bill, 2023, into plain language for everyone to understand.</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+          <img src="https://images.unsplash.com/photo-1577412647305-991150c7d163?ixlib=rb-4.0.3&auto=format&fit=crop&w=900&q=60" alt="Farmers Bill" class="w-full h-40 object-cover">
+          <div class="p-6 text-left">
+            <h3 class="text-xl font-bold text-gray-800 mb-2">🌾 Farmers Bill</h3>
+            <p class="text-gray-600 text-sm">Understand key agricultural reforms with unbiased insights and public opinion analysis.</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+          <img src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&auto=format&fit=crop&w=900&q=60" alt="Education Policy" class="w-full h-40 object-cover">
+          <div class="p-6 text-left">
+            <h3 class="text-xl font-bold text-gray-800 mb-2">🎓 Education Policy</h3>
+            <p class="text-gray-600 text-sm">Discover how the New Education Policy impacts students, teachers, and institutions nationwide.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="text-center py-8 text-gray-500 bg-white border-t">
+    <p>&copy; 2025 Sarkari Sanket. All rights reserved.</p>
+  </footer>
+
+  <script src="js/script.js"></script>
 </body>
 </html>
-
