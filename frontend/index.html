@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sarkari Sanket</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-50 font-inter">
+
+
+  <nav class="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <a href="#home" class="text-2xl font-extrabold text-green-600">Sarkari Sanket</a>
+      
+      <div class="hidden md:flex space-x-8 text-gray-700 font-medium items-center">
+        <a href="#home" class="hover:text-green-600 transition">Home</a>
+        <a href="#analyze" class="hover:text-green-600 transition">Analyze Bill</a>
+        <a href="#compare" class="hover:text-green-600 transition">Compare</a>
+        <a href="#history" id="nav-history" class="hover:text-green-600 transition">History</a>
+        <a href="#about" class="hover:text-green-600 transition">About</a>
+        
+
+        <div id="auth-links">
+            <button id="login-btn" class="text-gray-700 font-medium hover:text-green-600 transition">Login</button>
+            <button id="signup-btn" class="bg-green-600 text-white px-5 py-2 rounded-full font-medium hover:bg-green-700 transition">Sign Up</button>
+        </div>
+
+        <div id="user-info" class="hidden items-center">
+
+            <a href="#profile-section" id="nav-profile" class="text-gray-700 font-medium hover:text-green-600 transition mr-4">My Profile</a>
+            <span id="user-email" class="text-sm text-gray-600 mr-4"></span>
+            <button id="logout-btn" class="bg-red-500 text-white px-5 py-2 rounded-full font-medium hover:bg-red-600 transition">Logout</button>
+        </div>
+      </div>
+      <button id="menu-btn" class="md:hidden text-gray-700 focus:outline-none"></button>
+    </div>
+
+
+    <div id="mobile-menu" class="hidden md:hidden bg-white shadow-md flex flex-col items-center py-4 space-y-4">
+      <a href="#home" class="hover:text-green-600">Home</a>
+      <a href="#analyze" class="hover:text-green-600">Analyze Bill</a>
+      <a href="#compare" class="hover:text-green-600">Compare</a>
+      <a href="#history" class="hover:text-green-600">History</a>
+      <a href="#about" class="hover:text-green-600">About</a>
+    </div>
+  </nav>
+
+
+  <section id="home" class="relative bg-gradient-to-r from-green-600 to-orange-500 text-white min-h-screen flex flex-col justify-center items-center text-center px-6 pt-24">
+    <h1 class="text-5xl md:text-7xl font-extrabold mb-6 drop-shadow-lg">Welcome to Sarkari Sanket</h1>
+    <p class="text-lg md:text-2xl max-w-2xl mb-10 text-orange-100">
+      Your AI-powered guide to understanding government bills and policies.
+    </p>
+    <button onclick="scrollToForm()" class="bg-white text-green-700 font-bold py-4 px-10 rounded-full shadow-xl transform hover:scale-110 transition duration-300">
+      Start Analyzing
+    </button>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 max-w-5xl">
+      <div class="bg-white text-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+        <h3 class="text-xl font-bold mb-3">Simplified Bills</h3>
+        <p>Get complex government documents broken down into easy-to-understand summaries.</p>
+      </div>
+      <div class="bg-white text-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+        <h3 class="text-xl font-bold mb-3">Public Sentiment</h3>
+        <p>See how people feel about each bill with AI-powered sentiment analysis.</p>
+      </div>
+      <div class="bg-white text-gray-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl transform hover:-translate-y-2 transition duration-300">
+        <h3 class="text-xl font-bold mb-3">Multi-language</h3>
+        <p>Switch between English and Hinglish for better understanding.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <main id="analyze" class="container mx-auto px-4 py-20">
+    <div class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
+      <form id="bill-form">
+        <div class="mb-6">
+          <label for="billName" class="block text-gray-800 font-bold mb-3 text-lg">Enter Bill Name</label>
+          <input type="text" id="billName" class="shadow-inner appearance-none border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., The Digital Personal Data Protection Bill, 2023" />
+        </div>
+        <div class="relative flex items-center my-6">
+            <div class="flex-grow border-t border-gray-300"></div>
+            <span class="flex-shrink mx-4 text-gray-500 font-medium">OR</span>
+            <div class="flex-grow border-t border-gray-300"></div>
+        </div>
+        <div class="mb-8">
+            <label for="billFile" class="block text-gray-800 font-bold mb-3 text-lg">Upload Bill (PDF)</label>
+            <input type="file" id="billFile" name="billFile" 
+                   class="block w-full text-sm text-gray-700
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-full file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-blue-50 file:text-blue-700
+                          hover:file:bg-blue-100"
+                   accept=".pdf" />
+        </div>
+        <div class="mb-8">
+          <label class="toggle-label">
+            <span class="toggle-text text-gray-800" id="lang-en">English</span>
+            <input type="checkbox" id="language-toggle" class="toggle-input">
+            <div class="toggle-switch"></div>
+            <span class="toggle-text text-gray-400" id="lang-hi">Hinglish</span>
+          </label>
+        </div>
+        <div class="text-center">
+          <button type="submit" id="submit-button" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg text-lg transform hover:scale-105 transition-transform duration-200 ease-in-out shadow-lg flex items-center justify-center mx-auto w-full md:w-auto">Analyze Bill</button>
+        </div>
+      </form>
+      <p id="error-message" class="text-red-600 font-semibold text-center mt-4"></p>
+    </div>
+    <div id="results-wrapper" class="hidden mt-8 space-y-8">
+      <div id="summary-section" class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
+        <h2 id="summary-title" class="text-3xl font-bold text-gray-900 mb-2">Summary</h2>
+        <div id="source-info" class="text-sm text-gray-500 mb-6 border-b pb-4"></div>
+        <div id="summary-content" class="text-gray-700 prose prose-lg"></div>
+      </div>
+      <div id="sentiment-section" class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Public Sentiment</h2>
+        <div id="sentiment-bar-wrapper">
+          <div id="sentiment-bar" class="flex w-full h-8 bg-gray-200 rounded-full overflow-hidden"></div>
+          <div class="flex justify-around mt-4 text-base font-medium">
+            <span class="flex items-center"><span class="h-3 w-3 bg-green-500 rounded-full mr-2"></span>Positive</span>
+            <span class="flex items-center"><span class="h-3 w-3 bg-red-500 rounded-full mr-2"></span>Negative</span>
+            <span class="flex items-center"><span class="h-3 w-3 bg-gray-400 rounded-full mr-2"></span>Neutral</span>
+          </div>
+        </div>
+        <p id="sentiment-note" class="text-center text-gray-600 mt-4 text-lg"></p>
+      </div>
+    </div>
+  </main>
+  
+
+  <section id="compare" class="container mx-auto px-4 py-20">
+    <div class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+      <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Compare Bill Versions</h2>
+      <form id="compare-form">
+        <div class="mb-6">
+          <label for="compareBillName" class="block text-gray-800 font-bold mb-3 text-lg">Enter Bill Name</label>
+          <input type="text" id="compareBillName" class="shadow-inner border rounded-lg w-full py-3 px-4" placeholder="e.g., Data Protection Bill" required>
+        </div>
+        <div class="mb-6">
+          <label for="olderYear" class="block text-gray-800 font-bold mb-3 text-lg">Enter Older Year</label>
+          <input type="number" id="olderYear" class="shadow-inner border rounded-lg w-full py-3 px-4" placeholder="e.g., 2019" required>
+        </div>
+        <div class="mb-6">
+          <label for="compareLanguage" class="block text-gray-800 font-bold mb-3 text-lg">Language</label>
+          <select id="compareLanguage" class="shadow-inner border rounded-lg w-full py-3 px-4">
+            <option value="English">English</option>
+            <option value="Hinglish">Hinglish</option>
+          </select>
+        </div>
+        <div class="text-center">
+          <button type="submit" id="compare-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg">Compare</button>
+        </div>
+      </form>
+      <p id="compare-error" class="text-red-600 font-semibold text-center mt-4"></p>
+    </div>
+    <div id="compare-results" class="hidden mt-8 max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+      <h3 class="text-2xl font-bold mb-4">Comparison Result</h3>
+      <div id="compare-content" class="text-gray-800 prose prose-lg"></div>
+    </div>
+  </section>
+
+
+  <section id="profile-section" class="container mx-auto px-4 py-20 hidden">
+    <div class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-2xl">
+      <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">My Profile & Schemes</h2>
+      <p class="text-center text-gray-600 mb-6">Fill out your profile to find government schemes that match your needs. This information is saved to your account and can be updated anytime.</p>
+      
+
+      <form id="profile-form">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div>
+            <label for="profile-state" class="block text-gray-700 font-bold mb-2">State</label>
+            <input type="text" id="profile-state" class="shadow-inner border rounded-lg w-full py-3 px-4" placeholder="e.g., Punjab" required>
+          </div>
+          <div>
+            <label for="profile-age" class="block text-gray-700 font-bold mb-2">Age</label>
+            <input type="number" id="profile-age" class="shadow-inner border rounded-lg w-full py-3 px-4" placeholder="e.g., 21" required>
+          </div>
+          <div>
+            <label for="profile-sex" class="block text-gray-700 font-bold mb-2">Sex</label>
+            <select id="profile-sex" class="shadow-inner border rounded-lg w-full py-3 px-4">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="profile-occupation" class="block text-gray-700 font-bold mb-2">Occupation</label>
+            <input type="text" id="profile-occupation" class="shadow-inner border rounded-lg w-full py-3 px-4" placeholder="e.g., Student, Farmer" required>
+          </div>
+          <div>
+            <label for="profile-income" class="block text-gray-700 font-bold mb-2">Annual Income</label>
+            <input type="number" id="profile-income" class="shadow-inner border rounded-lg w-full py-3 px-4" placeholder="e.g., 300000" required>
+          </div>
+          <div>
+            <label for="profile-category" class="block text-gray-700 font-bold mb-2">Category</label>
+            <select id="profile-category" class="shadow-inner border rounded-lg w-full py-3 px-4">
+              <option value="general">General</option>
+              <option value="obc">OBC</option>
+              <option value="sc">SC</option>
+              <option value="st">ST</option>
+              <option value_="">---</option>
+              <option value="pwd">Person with Disability (PwD)</option>
+              <option value="senior_citizen">Senior Citizen</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="profile-marital-status" class="block text-gray-700 font-bold mb-2">Marital Status</label>
+            <select id="profile-marital-status" class="shadow-inner border rounded-lg w-full py-3 px-4">
+              <option value="na">Prefer not to say</option>
+              <option value="single">Single</option>
+              <option value="married">Married</option>
+              <option value="widowed">Widowed</option>
+              <option value="divorced">Divorced</option>
+            </select>
+          </div>
+
+        </div> <div id="only-girl-child-field" class="mt-6 hidden">
+          <label for="profile-only-girl-child" class="block text-gray-700 font-bold mb-2">Are you the only girl child in your family?</label>
+          <select id="profile-only-girl-child" class="shadow-inner border rounded-lg w-full py-3 px-4">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+        
+        <div id="parental-status-field" class="mt-6 hidden">
+          <label for="profile-parental-status" class="block text-gray-700 font-bold mb-2">Parental Status</label>
+          <select id="profile-parental-status" class="shadow-inner border rounded-lg w-full py-3 px-4">
+            <option value="both_alive">Both parents are alive</option>
+            <option value="one_alive">Only one parent is alive</option>
+            <option value="orphan">No parents are alive (Orphan)</option>
+          </select>
+        </div>
+        
+        <div class="text-center mt-8">
+          <button type="submit" id="profile-save-btn" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg">Save Profile & Find Schemes</button>
+        </div>
+      </form>
+      <p id="profile-message" class="font-semibold text-center mt-4"></p>
+    </div>
+
+
+    <div id="scheme-results" class="hidden mt-8 max-w-3xl mx-auto">
+      <h3 class="text-3xl font-bold text-gray-900 mb-6 text-center">Your Recommended Schemes</h3>
+      <div id="scheme-loader" class="text-center hidden">
+        <div class="loader-blue mx-auto"></div>
+        <p class="mt-2 text-gray-600">Finding schemes, please wait...</p>
+      </div>
+      <div id="scheme-list" class="space-y-6">
+
+      </div>
+    </div>
+  </section>
+
+
+  <section id="history" class="max-w-4xl mx-auto px-6 py-16">
+    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">My Search History</h2>
+    <div id="history-list" class="space-y-4">
+      <p id="no-history" class="text-gray-500 text-center">Login to see your search history.</p>
+    </div>
+  </section>
+  
+
+  <section id="about" class="bg-gray-100 py-20 px-6">
+    <div class="max-w-6xl mx-auto text-center">
+      <h2 class="text-4xl font-extrabold mb-6 text-gray-800">About Sarkari Sanket</h2>
+      <p class="max-w-3xl mx-auto text-gray-600 text-lg mb-12">
+        Sarkari Sanket is an AI-powered platform that simplifies government bills and schemes. 
+        It provides easy-to-understand summaries, public sentiment insights, and multi-language support 
+        so every citizen can stay informed and empowered.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+
+      </div>
+    </div>
+  </section>
+
+
+  <footer class="text-center py-8 text-gray-500 bg-white border-t">
+    <p>&copy; 2025 Sarkari Sanket. All rights reserved.</p>
+  </footer>
+
+
+  <div id="login-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Login</h2>
+        <button id="close-login-modal" class="text-gray-500 text-3xl">&times;</button>
+      </div>
+      <form id="login-form">
+        <div class="mb-4">
+          <label for="login-email" class="block text-gray-700 mb-2">Email</label>
+          <input type="email" id="login-email" class="w-full p-3 border rounded-lg" required>
+        </div>
+        <div class="mb-6">
+          <label for="login-password" class="block text-gray-700 mb-2">Password</label>
+          <input type="password" id="login-password" class="w-full p-3 border rounded-lg" required>
+        </div>
+        <button type="submit" class="w-full bg-blue-700 text-white py-3 rounded-lg font-medium hover:bg-blue-800">Login</button>
+        <p id="login-error" class="text-red-500 text-center mt-4"></p>
+      </form>
+    </div>
+  </div>
+  <div id="signup-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">Sign Up</h2>
+        <button id="close-signup-modal" class="text-gray-500 text-3xl">&times;</button>
+      </div>
+      <form id="signup-form">
+        <div class="mb-4">
+          <label for="signup-email" class="block text-gray-700 mb-2">Email</label>
+          <input type="email" id="signup-email" class="w-full p-3 border rounded-lg" required>
+        </div>
+        <div class="mb-6">
+          <label for="signup-password" class="block text-gray-700 mb-2">Password (min. 6 characters)</label>
+          <input type="password" id="signup-password" class="w-full p-3 border rounded-lg" required>
+        </div>
+        <button type="submit" class="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700">Create Account</button>
+        <p id="signup-error" class="text-red-500 text-center mt-4"></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

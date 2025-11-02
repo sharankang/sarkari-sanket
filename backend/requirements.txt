@@ -1,0 +1,13 @@
+Flask
+Flask-Cors
+textblob
+requests
+beautifulsoup4
+google-api-python-client
+google-generativeai
+PyPDF2
+python-dotenv
+# tweepy
+praw
+gunicorn
+firebase-admin
