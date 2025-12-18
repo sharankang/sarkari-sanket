@@ -10,6 +10,7 @@ import re
 from datetime import datetime
 import json
 
+# Load Configuration
 try:
     from config import (
         GOOGLE_API_KEY, SEARCH_ENGINE_ID, GEMINI_API_KEY,
@@ -19,15 +20,14 @@ except ImportError:
     GOOGLE_API_KEY, SEARCH_ENGINE_ID, GEMINI_API_KEY = None, None, None
     REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT = None, None, None
 
-
+# Configure Gemini
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 
 def get_bill_text_from_web(bill_name: str):
     """
-    AGENT STEP 1: Finds and scrapes the text of a bill.
-    (This is your working resilient version - UNCHANGED)
+    AGENT STEP 1: Finds and scrapes the text of a bill using Google Search API.
     """
     print(f"AGENT: Starting resilient search for '{bill_name}'...")
     if not GOOGLE_API_KEY or not SEARCH_ENGINE_ID:
@@ -63,7 +63,7 @@ def get_bill_text_from_web(bill_name: str):
                         scraped_text = ' '.join(p.get_text() for p in paragraphs)
                 
                 if scraped_text and len(scraped_text) > 100:
-                    print(f"AGENT: SUCCESS! Found and read readable text from {source_url}")
+                    print(f"AGENT: SUCCESS! Found readable text from {source_url}")
                     return {'text': scraped_text, 'url': source_url, 'error': None}
                 else:
                     print("AGENT: Source was accessible, but contained no readable text.")
@@ -80,8 +80,7 @@ def get_bill_text_from_web(bill_name: str):
 
 def generate_detailed_summary(bill_text: str, bill_name: str, language: str) -> str:
     """
-    AGENT STEP 2: Sends text to Gemini for a detailed summary.
-    (This is your working version - UNCHANGED)
+    AGENT STEP 2: Sends text to Gemini for a detailed summary in English or Hinglish.
     """
     print(f"AGENT: Sending text to Gemini for summarization in {language}...")
     if not GEMINI_API_KEY:
@@ -120,7 +119,6 @@ def generate_detailed_summary(bill_text: str, bill_name: str, language: str) -> 
 def get_social_media_sentiment(bill_name: str) -> dict:
     """
     AGENT STEP 3: Gathers and analyzes sentiment from Reddit.
-    (This is your working version - UNCHANGED)
     """
     print(f"AGENT: Starting sentiment analysis for '{bill_name}'...")
     if not all([REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USER_AGENT]):
@@ -190,86 +188,43 @@ def get_social_media_sentiment(bill_name: str) -> dict:
         print(f"AGENT ERROR (Reddit API): {e}")
         return {'error': f"Could not fetch data from Reddit. Please check your API keys."}
 
-def compare_bills(bill_name: str, older_year: str, language: str) -> str:
-    """
-    AGENT STEP 4: Compares the bill with an older version.
-    (This is your teammate's function - UNCHANGED)
-    """
-    print(f"AGENT: Comparing '{bill_name}' with version from {older_year}...")
 
-    if not GEMINI_API_KEY:
-        return "Error: Gemini API key is not configured."
+def compare_bills(bill_name, older_year, language):
+    """AGENT STEP 4: Simplified comparison of two bill versions."""
+    new_data = get_bill_text_from_web(bill_name)
+    old_data = get_bill_text_from_web(f"{bill_name} {older_year}")
+    
+    if "error" in new_data or "error" in old_data:
+        return "Error: Could not find both versions of the bill for comparison."
 
-    #Fetch new bill
-    new_bill_data = get_bill_text_from_web(bill_name)
-    if new_bill_data.get("error"):
-        return f"Could not fetch new bill: {new_bill_data['error']}"
+    new_text = new_data.get('text', '')
+    old_text = old_data.get('text', '')
 
-    #Fetch old bill
-    old_bill_query = f"{' '.join(bill_name.split()[:-1])} {older_year}"
-    print(f"AGENT: Searching for older version with query: '{old_bill_query}'")
-    old_bill_data = get_bill_text_from_web(old_bill_query)
-    if old_bill_data.get("error"):
-        return f"Could not fetch older bill version ({older_year}): {old_bill_data['error']}"
-
-    new_text = new_bill_data.get("text", "")
-    old_text = old_bill_data.get("text", "")
-
-    if not new_text or not old_text:
-        return "Error: Could not extract text from one or both versions."
-
-    #Summarize differences with Gemini
     model = genai.GenerativeModel("gemini-2.5-flash")
-
-    language_instruction = (
-        "Write the comparison in simple Hinglish for common citizens."
-        if language == "Hinglish"
-        else "Write the comparison in clear English for common citizens."
-    )
-
     prompt = f"""
-    You are an expert law analyst. Compare the following two versions of the same bill:
-
-    NEW VERSION TEXT: "{new_text[:3000]}"
-    OLD VERSION ({older_year}) TEXT: "{old_text[:3000]}"
-
-    Task: Identify the main differences between these two texts. Focus on:
-    - New clauses or sections that have been added.
-    - Important clauses or rules that have been removed.
-    - Any changes in scope, penalties, or powers.
-
-    Structure your output with the following markdown headings:
+    Compare these bills simply. 
+    NEW: {new_text[:2500]}
+    OLD: {old_text[:2500]}
+    
+    CRITICAL: Be extremely brief for a citizen. Max 3 bullets per heading. 
+    Each bullet point MUST be under 15 words. Avoid legal jargon.
     ### Key Additions
-    - ...
-
     ### Key Removals
-    - ...
-
     ### Major Changes
-    - ...
-
-    {language_instruction}
+    Answer in {language}.
     """
-
-    try:
-        response = model.generate_content(prompt)
-        print("AGENT: Comparison generated successfully.")
-        return response.text
-    except Exception as e:
-        print(f"AGENT ERROR (Comparison): {e}")
-        return f"Error occurred while comparing bills: {e}"
-
+    try: return model.generate_content(prompt).text
+    except Exception as e: return str(e)
 
 def find_matching_schemes(profile: dict) -> dict:
     """
-    AGENT STEP 5: Takes a user profile, finds scheme *names*,
-    and then finds the *direct link* for each name.
+    AGENT STEP 5: Takes a user profile and finds matching government schemes.
     """
     print(f"AGENT: Finding schemes for profile: {profile}")
     if not all([GOOGLE_API_KEY, SEARCH_ENGINE_ID, GEMINI_API_KEY]):
         return {'error': "API keys are not configured."}
 
-    #Create the initial search query
+    # Create the initial search query
     query_parts = ["government schemes"]
     if profile.get('occupation'):
         query_parts.append(f"for {profile['occupation']}")
@@ -316,7 +271,7 @@ def find_matching_schemes(profile: dict) -> dict:
                 "snippet": item.get('snippet')
             })
         
-        #Gemini to match schemes from results
+        # Gemini to match schemes from results
         model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
         You are an AI assistant. Here is a user's profile and a list of Google search results.
@@ -341,15 +296,7 @@ def find_matching_schemes(profile: dict) -> dict:
         - If a search result is irrelevant (e.t., a news article, a generic portal homepage), ignore it.
         - If none of the search results are relevant, return an empty list [].
 
-        Return your answer as a JSON list. For example:
-        [
-          {{
-            "scheme_name": "Kalpana Chawla Chhatravriti Yojana, Himachal Pradesh",
-            "summary": "This scheme provides scholarships to meritorious girl students of Himachal Pradesh.",
-            "eligibility": "For meritorious girl students of Himachal Pradesh.",
-            "link": "https://hpepass.cgg.gov.in/NewHomePage.do?actionParameter=schemes"
-          }}
-        ]
+        Return your answer as a JSON list. 
         """
         response = model.generate_content(prompt)
         print("AGENT: Gemini has processed the Google results.")
@@ -363,14 +310,104 @@ def find_matching_schemes(profile: dict) -> dict:
             return {'error': "The AI assistant returned an invalid format."}
 
         if not schemes_list:
-            return {"schemes": "[]", "sources": [res['items'][0]['link']]} # Return empty list if no matches
+            return {"schemes": "[]", "sources": [res['items'][0]['link']]} 
 
         print(f"AGENT: Found {len(schemes_list)} matching schemes.")
 
-        #Return the final, augmented JSON
+        # Return the final augmented JSON
         final_json_string = json.dumps(schemes_list, indent=2)
         return {"schemes": final_json_string, "sources": [r['link'] for r in google_results]}
 
     except Exception as e:
         print(f"--- DETAILED AGENT ERROR (find_schemes) ---\n{e}\n--------------------------")
         return {'error': f"A critical error occurred while finding schemes: {e}"}
+
+
+def ask_sarkari_mitra(bill_text, query, language):
+    """
+    AGENT STEP 6: Context-aware AI chatbot assistant (Sarkari Mitra).
+    """
+    print(f"AGENT: Sarkari Mitra processing query in {language}...")
+    if not GEMINI_API_KEY:
+        return "Error: Gemini API key is not configured."
+
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    prompt = f"""
+    You are 'Sarkari Mitra', a helpful policy assistant. 
+    Context (Bill Text): {bill_text[:6000]} 
+    User Question: {query}
+    Provide a helpful, concise answer in {language}. 
+    If the question is unrelated to the bill, politely guide them back.
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"AGENT ERROR (Sarkari Mitra): {e}")
+        return f"Sorry, I encountered an error: {e}"
+
+
+def calculate_impact_scores(bill_text):
+    """
+    AGENT STEP 7: DYNAMIC Demographic-specific impact scorer.
+    Identifies relevant groups based on bill content and scores them.
+    """
+    print("AGENT: Dynamically identifying and scoring demographic impact...")
+    if not GEMINI_API_KEY:
+        return {}
+
+    model = genai.GenerativeModel('gemini-2.5-flash')
+    
+    prompt = f"""
+    Analyze this bill text: {bill_text[:4000]}
+    
+    TASK:
+    1. Identify the 4 specific demographic groups or citizen categories most affected by this bill (e.g., 'Freelancers', 'Industrial Workers', 'Rural Women', 'Startups', etc.).
+    2. For each identified group, provide an 'Impact Score' (1-100).
+    3. Provide a 1-sentence reason for that score.
+
+    RULES:
+    - Choose categories relevant to the specific bill content.
+    - Return ONLY a JSON object with this exact structure:
+    {{
+        "Group_Name": {{"score": X, "reason": "..."}},
+        "Group_Name_2": {{"score": Y, "reason": "..."}}
+    }}
+    """
+    try:
+        response = model.generate_content(prompt)
+        # Clean JSON from markdown tags
+        clean_json = response.text.strip().replace('```json', '').replace('```', '')
+        raw_scores = json.loads(clean_json)
+        
+        return {k: v for k, v in raw_scores.items() if v['score'] > 20}
+    except Exception as e:
+        print(f"AGENT ERROR (Impact Scorer): {e}")
+        return {}
+
+def get_bill_news(bill_name):
+    """
+    AGENT STEP 8: Real-time news aggregator for the viewed bill.
+    """
+    print(f"AGENT: Fetching news for {bill_name}...")
+    if not GOOGLE_API_KEY or not SEARCH_ENGINE_ID:
+        return []
+
+    try:
+        service = build("customsearch", "v1", developerKey=GOOGLE_API_KEY)
+        # Query specifically for news/press releases
+        res = service.cse().list(q=f"{bill_name} latest news press releases India", cx=SEARCH_ENGINE_ID, num=3).execute()
+        news_items = []
+        if 'items' in res:
+            for item in res['items']:
+                news_items.append({
+                    'title': item['title'], 
+                    'link': item['link'], 
+                    'snippet': item['snippet']
+                })
+        return news_items
+    except Exception as e:
+        print(f"AGENT ERROR (News Aggregator): {e}")
+        return []

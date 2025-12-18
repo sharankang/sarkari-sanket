@@ -1,12 +1,22 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from agent import get_bill_text_from_web, generate_detailed_summary, get_social_media_sentiment, compare_bills, find_matching_schemes
+from agent import (
+    get_bill_text_from_web, 
+    generate_detailed_summary, 
+    get_social_media_sentiment, 
+    compare_bills, 
+    find_matching_schemes,
+    ask_sarkari_mitra,
+    calculate_impact_scores,
+    get_bill_news
+)
 import PyPDF2
 from io import BytesIO
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import os
 
+# Firebase Initialization
 try:
     key_path = "backend/firebase-key.json"
     if not os.path.exists(key_path):
@@ -26,12 +36,14 @@ except Exception as e:
     db = None
 
 app = Flask(__name__)
+
 CORS(app, resources={
     r"/api/*": {
         "origins": [
-            "http://127.0.0.1:5500",  # local frontend
+            "http://127.0.0.1:5500",
             "http://localhost:3000",
-            # "https://sharankang.github.io" # live frontend
+            "http://127.0.0.1:5501",
+            "https://sharankang.github.io"
         ]
     }
 })
@@ -50,7 +62,8 @@ def get_user_from_token(request):
         print(f"Error verifying token: {e}")
         return None
 
-#Authentication Route
+#AUTHENTICATION ROUTES
+
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -65,7 +78,7 @@ def register():
             user_ref.set({
                 'email': user.email,
                 'created_at': firestore.SERVER_TIMESTAMP,
-                'profile': {} # Empty profile
+                'profile': {} 
             })
         return jsonify({'uid': user.uid, 'email': user.email}), 201
     except auth.EmailAlreadyExistsError:
@@ -73,7 +86,8 @@ def register():
     except Exception as e:
         return jsonify({'error': f'An error occurred: {e}'}), 500
 
-#Bill Analysis Route
+#CORE ANALYSIS ROUTE
+
 @app.route('/api/analyze', methods=['POST'])
 def analyze_bill():
     try:
@@ -83,77 +97,79 @@ def analyze_bill():
         language = request.form.get('language', 'English')
         bill_text, source_url, bill_name_for_analysis = "", "", bill_name
 
+        #Text Extraction
         if file and file.filename != '':
-            print("AGENT: Processing uploaded PDF file.")
             try:
                 pdf_reader = PyPDF2.PdfReader(BytesIO(file.read()))
                 for page in pdf_reader.pages:
                     bill_text += page.extract_text() or ""
+                source_url = f"Uploaded File: {file.filename}"
+                if not bill_name_for_analysis:
+                    bill_name_for_analysis = file.filename.replace('.pdf', '').replace('_', ' ')
             except Exception as e:
-                print(f"Error reading PDF: {e}")
-                return jsonify({'error': 'Could not read text from the uploaded PDF.'}), 500
-            source_url = f"Uploaded File: {file.filename}"
-            if not bill_name_for_analysis:
-                bill_name_for_analysis = file.filename.replace('.pdf', '').replace('_', ' ')
+                return jsonify({'error': 'Could not read uploaded PDF.'}), 500
         
         elif bill_name:
-            print("AGENT: Processing by bill name, calling web scraper.")
             web_data = get_bill_text_from_web(bill_name)
             if web_data.get('error'):
                 return jsonify({'error': web_data['error'], 'source_url': web_data.get('url')}), 500
             bill_text, source_url = web_data.get('text'), web_data.get('url')
         
         else:
-            return jsonify({'error': 'Please enter a bill name or upload a PDF file.'}), 400
+            return jsonify({'error': 'Provide a bill name or PDF file.'}), 400
 
         if not bill_text:
-            return jsonify({'error': 'Could not extract readable text from the provided source.'}), 500
+            return jsonify({'error': 'Could not extract text.'}), 500
 
+        #Sequential Analysis Processing
         summary = generate_detailed_summary(bill_text, bill_name_for_analysis, language)
         sentiment = get_social_media_sentiment(bill_name_for_analysis)
+        impact_scores = calculate_impact_scores(bill_text) # This now uses the filtering logic
+        news = get_bill_news(bill_name_for_analysis)
         
+        #History Management
         if user and db:
             try:
-                user_id = user['uid']
-                history_ref = db.collection('users').document(user_id).collection('history').document()
-                sentiment_to_save = sentiment.get('note') or sentiment.get('error') if sentiment.get('note') or sentiment.get('error') else sentiment
+                history_ref = db.collection('users').document(user['uid']).collection('history').document()
+                sentiment_data = sentiment.get('note') or sentiment.get('error') or sentiment
                 history_ref.set({
-                    'billName': bill_name_for_analysis, 'summary': summary,
-                    'sentiment': sentiment_to_save, 'source': source_url,
+                    'billName': bill_name_for_analysis, 
+                    'summary': summary,
+                    'sentiment': sentiment_data, 
+                    'source': source_url,
                     'date': firestore.SERVER_TIMESTAMP
                 })
-                print(f"Saved history for user {user_id}")
             except Exception as e:
-                print(f"Error saving history: {e}")
+                print(f"History Save Error: {e}")
 
-        return jsonify({'summary': summary, 'sentiment': sentiment, 'source_url': source_url})
+        #Final Response Construction
+        return jsonify({
+            'summary': summary, 
+            'sentiment': sentiment, 
+            'source_url': source_url,
+            'impact_scores': impact_scores,
+            'news': news,
+            'bill_text': bill_text[:8000] #Context for frontend chatbot
+        })
     except Exception as e:
-        print(f"A critical error occurred in /api/analyze: {e}")
-        return jsonify({'error': 'A critical internal error occurred.'}), 500
+        print(f"Critical Error: {e}")
+        return jsonify({'error': 'Internal server error occurred.'}), 500
 
-#History Route
-@app.route('/api/get-history', methods=['GET'])
-def get_history():
-    user = get_user_from_token(request)
-    if not user: return jsonify({'error': 'Not authorized. Please log in.'}), 401
-    if not db: return jsonify({'error': 'Database not connected'}), 500
-    try:
-        user_id = user['uid']
-        history_ref = db.collection('users').document(user_id).collection('history').order_by('date', direction=firestore.Query.DESCENDING).limit(5)
-        docs = history_ref.stream()
-        history_list = []
-        for doc in docs:
-            data = doc.to_dict()
-            if data.get('date'):
-                data['date'] = data['date'].strftime('%Y-%m-%d %H:%M:%S')
-            data['id'] = doc.id
-            history_list.append(data)
-        return jsonify(history_list), 200
-    except Exception as e:
-        print(f"Error fetching history: {e}")
-        return jsonify({'error': 'Could not fetch history.'}), 500
+#FEATURE ENDPOINTS
 
-#Compare Route
+@app.route('/api/chat', methods=['POST'])
+def chat_with_mitra():
+    data = request.get_json()
+    bill_text = data.get('bill_text')
+    query = data.get('query')
+    language = data.get('language', 'English')
+    
+    if not bill_text or not query:
+        return jsonify({'error': 'Missing context/query'}), 400
+        
+    answer = ask_sarkari_mitra(bill_text, query, language)
+    return jsonify({'answer': answer})
+
 @app.route('/api/compare', methods=['POST'])
 def compare_bill_versions():
     data = request.get_json()
@@ -162,82 +178,69 @@ def compare_bill_versions():
     language = data.get('language', 'English')
 
     if not bill_name or not older_year:
-        return jsonify({'error': 'bill_name and older_year are required fields'}), 400
+        return jsonify({'error': 'Required: bill_name, older_year'}), 400
     try:
-        comparison_result = compare_bills(bill_name, older_year, language)
-        if "Error:" in comparison_result:
-            return jsonify({'error': comparison_result}), 500
-        return jsonify({'comparison': comparison_result})
+        result = compare_bills(bill_name, older_year, language)
+        return jsonify({'comparison': result})
     except Exception as e:
-        print(f"Error in /api/compare route: {e}")
-        return jsonify({'error': 'A critical internal error occurred.'}), 500
+        return jsonify({'error': str(e)}), 500
 
+#USER PROFILE & SCHEMES
 
 @app.route('/api/get-profile', methods=['GET'])
 def get_profile():
     user = get_user_from_token(request)
-    if not user: return jsonify({'error': 'Not authorized'}), 401
-    if not db: return jsonify({'error': 'Database not connected'}), 500
-
+    if not user or not db: return jsonify({'error': 'Not authorized'}), 401
     try:
-        user_ref = db.collection('users').document(user['uid'])
-        doc = user_ref.get()
-        if doc.exists:
-            profile_data = doc.to_dict().get('profile', {})
-            return jsonify(profile_data), 200
-        else:
-            return jsonify({}), 200
+        doc = db.collection('users').document(user['uid']).get()
+        return jsonify(doc.to_dict().get('profile', {})) if doc.exists else jsonify({}), 200
     except Exception as e:
-        return jsonify({'error': f'An error occurred: {e}'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/update-profile', methods=['POST'])
 def update_profile():
     user = get_user_from_token(request)
-    if not user: return jsonify({'error': 'Not authorized'}), 401
-    if not db: return jsonify({'error': 'Database not connected'}), 500
-
+    if not user or not db: return jsonify({'error': 'Not authorized'}), 401
     profile_data = request.get_json()
-    if not profile_data:
-        return jsonify({'error': 'No profile data provided'}), 400
-
     try:
-        user_ref = db.collection('users').document(user['uid'])
-        user_ref.set({'profile': profile_data}, merge=True)
-        return jsonify({'success': True, 'message': 'Profile updated!'}), 200
+        db.collection('users').document(user['uid']).set({'profile': profile_data}, merge=True)
+        return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': f'An error occurred: {e}'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/find-schemes', methods=['GET'])
 def find_schemes():
     user = get_user_from_token(request)
-    if not user: return jsonify({'error': 'Not authorized'}), 401
-    if not db: return jsonify({'error': 'Database not connected'}), 500
-
+    if not user or not db: return jsonify({'error': 'Not authorized'}), 401
     try:
-        #Get the user's saved profile
-        user_ref = db.collection('users').document(user['uid'])
-        doc = user_ref.get()
+        doc = db.collection('users').document(user['uid']).get()
         if not doc.exists or not doc.to_dict().get('profile'):
-            return jsonify({'error': 'Please save your profile first.'}), 400
+            return jsonify({'error': 'Profile not found'}), 400
         
-        profile = doc.to_dict().get('profile')
-        
-        #Call the new agent function
-        schemes_result = find_matching_schemes(profile)
-        
-        if schemes_result.get("error"):
-            return jsonify({'error': schemes_result.get("error")}), 500
-            
-        return jsonify(schemes_result), 200
-
+        schemes = find_matching_schemes(doc.to_dict().get('profile'))
+        return jsonify(schemes), 200
     except Exception as e:
-        print(f"Error in /api/find-schemes: {e}")
-        return jsonify({'error': 'A critical internal error occurred.'}), 500
+        return jsonify({'error': str(e)}), 500
 
+@app.route('/api/get-history', methods=['GET'])
+def get_history():
+    user = get_user_from_token(request)
+    if not user or not db: return jsonify({'error': 'Not authorized'}), 401
+    try:
+        docs = db.collection('users').document(user['uid']).collection('history').order_by('date', direction=firestore.Query.DESCENDING).limit(5).stream()
+        history = []
+        for doc in docs:
+            d = doc.to_dict()
+            if d.get('date'): d['date'] = d['date'].strftime('%Y-%m-%d %H:%M:%S')
+            d['id'] = doc.id
+            history.append(d)
+        return jsonify(history), 200
+    except Exception as e:
+        return jsonify({'error': 'History fetch failed.'}), 500
 
 @app.route('/')
 def home():
-    return "Backend server for Sarkari Sanket is running!"
+    return "Sarkari Sanket Backend Online."
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
