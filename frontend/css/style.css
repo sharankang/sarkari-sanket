@@ -1,15 +1,63 @@
+/* General Layout Fixes */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
 
-.toggle-switch { width: 56px; height: 28px; transition: background-color 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
-.toggle-switch::before { 
-    content: ""; position: absolute; left: 4px; top: 4px; 
-    width: 20px; height: 20px; background: white; border-radius: 50%; 
-    transition: transform 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+/* FIXED: Toggle Switch Container */
+.toggle-switch { 
+    display: inline-block !important; /* Forces visibility */
+    position: relative !important;    /* Required for the absolute dot */
+    width: 56px !important; 
+    height: 28px !important; 
+    background-color: #e5e7eb;        /* Default gray */
+    border-radius: 9999px !important; 
+    cursor: pointer;
+    transition: background-color 0.3s ease; 
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); 
+    vertical-align: middle;
 }
-.toggle-input:checked + .toggle-switch { background-color: #1e40af; }
-.toggle-input:checked + .toggle-switch::before { transform: translateX(28px); }
 
-.loader-blue { border: 4px solid #f3f4f6; border-radius: 50%; border-top: 4px solid #1e40af; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; }
+/* The Sliding White Dot */
+.toggle-switch::before { 
+    content: "" !important; 
+    position: absolute !important; 
+    left: 4px !important; 
+    top: 4px !important; 
+    width: 20px !important; 
+    height: 20px !important; 
+    background: white !important; 
+    border-radius: 50% !important; 
+    transition: transform 0.2s ease-in-out !important; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important; 
+    z-index: 10;
+}
+
+/* Logic for Checked State */
+.toggle-input:checked + .toggle-switch { 
+    background-color: #1e40af !important; /* Dark Blue */
+}
+
+.toggle-input:checked + .toggle-switch::before { 
+    transform: translateX(28px) !important; /* Moves dot to right */
+}
+
+/* Fix for loaders and cards */
+.loader-blue { 
+    border: 4px solid #f3f4f6; 
+    border-radius: 50%; 
+    border-top: 4px solid #1e40af; 
+    width: 30px; 
+    height: 30px; 
+    animation: spin 1s linear infinite; 
+    display: inline-block; 
+}
+
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-.scheme-card { background: white; padding: 1.25rem; border-radius: 1rem; border-left: 5px solid #2563eb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+.scheme-card {
+    background: white;
+    border-radius: 12px;
+    border-left: 4px solid #1e40af;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}

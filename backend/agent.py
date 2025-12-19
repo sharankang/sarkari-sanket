@@ -219,17 +219,24 @@ def compare_bills(bill_name, older_year, language):
 def find_matching_schemes(profile: dict) -> dict:
     """
     AGENT STEP 5: Takes a user profile and finds matching government schemes.
+    Enhanced to handle all 9+ profile fields and provide terminal debugging.
     """
-    print(f"AGENT: Finding schemes for profile: {profile}")
+    print(f"\nAGENT: --- STARTING SCHEME SEARCH ---")
+    print(f"AGENT: Input Profile: {profile}")
+    
     if not all([GOOGLE_API_KEY, SEARCH_ENGINE_ID, GEMINI_API_KEY]):
+        print("AGENT ERROR: Configuration keys missing in agent.py")
         return {'error': "API keys are not configured."}
 
-    # Create the initial search query
-    query_parts = ["government schemes"]
+    # Create the search query using the full 9-field profile data
+    query_parts = ["government schemes India"]
+    
     if profile.get('occupation'):
         query_parts.append(f"for {profile['occupation']}")
+    
     if profile.get('state'):
         query_parts.append(f"in {profile['state']}")
+    
     if profile.get('category') and profile.get('category') not in ['general', '---']:
         query_parts.append(f"for {profile['category']} category")
     
@@ -240,29 +247,32 @@ def find_matching_schemes(profile: dict) -> dict:
         query_parts.append("for only girl child")
         
     if profile.get('marital_status') == 'married':
-        query_parts.append("for married couples")
+        query_parts.append("for married")
     elif profile.get('marital_status') == 'widowed':
         query_parts.append("for widows")
         
     if profile.get('parental_status') == 'orphan':
         query_parts.append("for orphans")
-    elif profile.get('parental_status') == 'one_alive':
-        query_parts.append("for single parent child")
 
+    # Final query construction
     query = " ".join(query_parts)
-    print(f"AGENT: Generated Search Query: {query}")
+    print(f"AGENT: Final Search Query: {query}")
 
     try:
         service = build("customsearch", "v1", developerKey=GOOGLE_API_KEY, static_discovery=False)
         
+        # Restricting search to official gov domains for better quality
         search_query = f"{query} -filetype:pdf (site:gov.in OR site:nic.in OR site:myScheme.gov.in)"
-        print(f"AGENT: Executing search: {search_query}")
+        print(f"AGENT: Executing Google CSE Search: {search_query}")
         
         res = service.cse().list(q=search_query, cx=SEARCH_ENGINE_ID, num=5).execute()
         
         if 'items' not in res or not res['items']:
-            return {'error': "Sorry, no relevant scheme websites were found for your profile."}
+            print("AGENT WARNING: Google CSE returned ZERO results.")
+            return {'error': "Google search could not find any official government scheme links for this profile."}
         
+        print(f"AGENT: Found {len(res['items'])} potential links. Passing to Gemini for matching...")
+
         google_results = []
         for item in res['items']:
             google_results.append({
@@ -271,56 +281,56 @@ def find_matching_schemes(profile: dict) -> dict:
                 "snippet": item.get('snippet')
             })
         
-        # Gemini to match schemes from results
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # Using the model name you confirmed works
+        model = genai.GenerativeModel('gemini-2.5-flash-lite')
+        
         prompt = f"""
-        You are an AI assistant. Here is a user's profile and a list of Google search results.
-        Your task is to analyze the Google results and find schemes that *actually match* the user's profile.
+        You are an AI assistant helping a citizen find government schemes. 
+        Analyze these Google search results against the user's profile.
 
         USER PROFILE:
         {profile}
 
-        GOOGLE RESULTS:
+        GOOGLE SEARCH RESULTS:
         {json.dumps(google_results, indent=2)}
 
-        Task: Find up to 3 relevant schemes from the Google results that are the best match for the user's profile.
-        For each scheme, provide:
-        1. "scheme_name": The official scheme name (use the 'title' from the search result).
-        2. "summary": A 1-2 sentence summary of what it does (use the 'snippet' from the search result, rephrased if needed).
-        3. "eligibility": A 1-sentence summary of eligibility (based on the 'snippet').
-        4. "link": The 'link' from the *exact same* search result.
+        TASK: 
+        Find the top 3 schemes from the search results that are a direct match for this user.
+        Return ONLY a JSON list of objects with these keys:
+        - "scheme_name": Official name of the scheme.
+        - "summary": 1-2 sentence description of benefits.
+        - "eligibility": 1-sentence summary of who can apply.
+        - "link": The exact URL from the search result.
 
-        Rules:
-        - You MUST use the `link` from the search result you are referencing.
-        - Do not invent schemes. Only use information from the provided Google results.
-        - If a search result is irrelevant (e.t., a news article, a generic portal homepage), ignore it.
-        - If none of the search results are relevant, return an empty list [].
-
-        Return your answer as a JSON list. 
+        RULES:
+        1. Use the EXACT links provided in the results.
+        2. If a result is just a news article or generic home page, ignore it.
+        3. If NO schemes match, return an empty list: [].
         """
-        response = model.generate_content(prompt)
-        print("AGENT: Gemini has processed the Google results.")
         
+        response = model.generate_content(prompt)
+        print("AGENT: Gemini analysis complete.")
+        
+        # Clean the response text for JSON parsing
         json_response_text = response.text.strip().lstrip("```json").rstrip("```")
         
         try:
             schemes_list = json.loads(json_response_text)
+            print(f"AGENT: Successfully identified {len(schemes_list)} matching schemes.")
+            
+            # Return the JSON list stringified so script.js double-parsing works
+            return {
+                "schemes": json.dumps(schemes_list), 
+                "sources": [r['link'] for r in google_results]
+            }
+            
         except json.JSONDecodeError:
-            print(f"AGENT ERROR: Gemini did not return valid JSON. Response: {json_response_text}")
-            return {'error': "The AI assistant returned an invalid format."}
-
-        if not schemes_list:
-            return {"schemes": "[]", "sources": [res['items'][0]['link']]} 
-
-        print(f"AGENT: Found {len(schemes_list)} matching schemes.")
-
-        # Return the final augmented JSON
-        final_json_string = json.dumps(schemes_list, indent=2)
-        return {"schemes": final_json_string, "sources": [r['link'] for r in google_results]}
+            print("AGENT ERROR: Gemini returned invalid JSON format.")
+            return {'error': "The AI assistant returned an invalid response format."}
 
     except Exception as e:
-        print(f"--- DETAILED AGENT ERROR (find_schemes) ---\n{e}\n--------------------------")
-        return {'error': f"A critical error occurred while finding schemes: {e}"}
+        print(f"AGENT CRITICAL ERROR in find_matching_schemes: {str(e)}")
+        return {'error': f"A critical error occurred while searching: {str(e)}"}
 
 
 def ask_sarkari_mitra(bill_text, query, language):
