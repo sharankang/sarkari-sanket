@@ -1,6 +1,15 @@
 
 ## Sarkari Sanket is an AI-powered platform designed to simplify Indian government bills and schemes for the common citizen, offering simplified summaries, sentiment analysis, and personalized scheme recommendations.
 
+
+### Working Demo
+
+https://github.com/user-attachments/assets/9047ccda-109e-43a4-8c2a-cbcd75df2745
+
+
+
+
+
 ### Features
 
 1. Bill Simplification & Summary
@@ -33,4 +42,6 @@
 - Database & Auth: Firebase Firestore & Authentication
 - APIs: - Google Custom Search API (for scraping bill text and schemes)
 - PRAW (Reddit API for sentiment data)
+
+
 
