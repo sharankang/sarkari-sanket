@@ -26,7 +26,8 @@ try {
 let currentUser = null;
 let currentToken = null;
 let lastAnalyzedBillText = ""; 
-const backendUrl = 'http://127.0.0.1:5000'; // local testing
+// const backendUrl = 'http://127.0.0.1:5000'; // local testing
+const backendUrl = 'https://sarkari-sanket-backend.onrender.com'; // production
 
 // ========== DOM References - Main Form & Results ==========
 const billForm = document.getElementById('bill-form');
