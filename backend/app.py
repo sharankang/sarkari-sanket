@@ -15,40 +15,43 @@ from io import BytesIO
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 import os
+import traceback
 
-# Firebase Initialization
+
 try:
     key_path = "backend/firebase-key.json"
     if not os.path.exists(key_path):
         key_path = "firebase-key.json"
-        if not os.path.exists(key_path):
-            raise FileNotFoundError("firebase-key.json not found in 'backend/' or root.")
-            
-    cred = credentials.Certificate(key_path)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("Firebase connected successfully.")
-except FileNotFoundError:
-    print("CRITICAL WARNING: 'firebase-key.json' not found. Authentication features will fail.")
-    db = None
+    
+    if os.path.exists(key_path):
+        cred = credentials.Certificate(key_path)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        print("AGENT: Firebase connected successfully.")
+    else:
+        print("AGENT CRITICAL WARNING: 'firebase-key.json' not found. DB features will fail.")
+        db = None
 except Exception as e:
-    print(f"Firebase initialization error: {e}")
+    print(f"AGENT ERROR: Firebase initialization error: {e}")
     db = None
 
 app = Flask(__name__)
 
+
 CORS(app, resources={
     r"/api/*": {
         "origins": [
+            "https://sharankang.github.io",
             "http://127.0.0.1:5500",
-            "http://localhost:3000",
             "http://127.0.0.1:5501",
-            "https://sharankang.github.io"
-        ]
+            "http://localhost:3000"
+        ],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
     }
 })
 
-# Helper Function to Verify Token
+# Helper function to verify token
 def get_user_from_token(request):
     id_token = request.headers.get('Authorization')
     if not id_token:
@@ -59,10 +62,10 @@ def get_user_from_token(request):
         decoded_token = auth.verify_id_token(id_token)
         return decoded_token
     except Exception as e:
-        print(f"Error verifying token: {e}")
+        print(f"AGENT: Error verifying token: {e}")
         return None
 
-#AUTHENTICATION ROUTES
+
 
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -86,7 +89,7 @@ def register():
     except Exception as e:
         return jsonify({'error': f'An error occurred: {e}'}), 500
 
-#CORE ANALYSIS ROUTE
+
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_bill():
@@ -97,7 +100,7 @@ def analyze_bill():
         language = request.form.get('language', 'English')
         bill_text, source_url, bill_name_for_analysis = "", "", bill_name
 
-        #Text Extraction
+        # Text extraction
         if file and file.filename != '':
             try:
                 pdf_reader = PyPDF2.PdfReader(BytesIO(file.read()))
@@ -112,7 +115,7 @@ def analyze_bill():
         elif bill_name:
             web_data = get_bill_text_from_web(bill_name)
             if web_data.get('error'):
-                return jsonify({'error': web_data['error'], 'source_url': web_data.get('url')}), 500
+                return jsonify({'error': web_data['error'], 'source_url': web_data.get('url')}), 400
             bill_text, source_url = web_data.get('text'), web_data.get('url')
         
         else:
@@ -121,13 +124,13 @@ def analyze_bill():
         if not bill_text:
             return jsonify({'error': 'Could not extract text.'}), 500
 
-        #Sequential Analysis Processing
+        #Sequential analysis processing
         summary = generate_detailed_summary(bill_text, bill_name_for_analysis, language)
         sentiment = get_social_media_sentiment(bill_name_for_analysis)
-        impact_scores = calculate_impact_scores(bill_text) # This now uses the filtering logic
+        impact_scores = calculate_impact_scores(bill_text)
         news = get_bill_news(bill_name_for_analysis)
         
-        #History Management
+        #History management
         if user and db:
             try:
                 history_ref = db.collection('users').document(user['uid']).collection('history').document()
@@ -140,22 +143,22 @@ def analyze_bill():
                     'date': firestore.SERVER_TIMESTAMP
                 })
             except Exception as e:
-                print(f"History Save Error: {e}")
+                print(f"AGENT: History Save Error: {e}")
 
-        #Final Response Construction
+        #Final response construction
         return jsonify({
             'summary': summary, 
             'sentiment': sentiment, 
             'source_url': source_url,
             'impact_scores': impact_scores,
             'news': news,
-            'bill_text': bill_text[:8000] #Context for frontend chatbot
+            'bill_text': bill_text[:8000]
         })
     except Exception as e:
-        print(f"Critical Error: {e}")
-        return jsonify({'error': 'Internal server error occurred.'}), 500
+        print("AGENT CRITICAL ERROR in /api/analyze:")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
-#FEATURE ENDPOINTS
 
 @app.route('/api/chat', methods=['POST'])
 def chat_with_mitra():
@@ -185,7 +188,7 @@ def compare_bill_versions():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-#USER PROFILE & SCHEMES
+
 
 @app.route('/api/get-profile', methods=['GET'])
 def get_profile():
@@ -243,4 +246,5 @@ def home():
     return "Sarkari Sanket Backend Online."
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
